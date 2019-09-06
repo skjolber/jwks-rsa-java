@@ -173,38 +173,12 @@ public class UrlJwkProviderTest {
         new UrlJwkProvider(new URL("https://localhost"), null, -1);
     }
 
-    private static class MockURLStreamHandlerFactory implements URLStreamHandlerFactory {
-
-        // The weak reference is just a safeguard against objects not being released
-        // for garbage collection
-        private final WeakReference<URLConnection> value;
-
-        public MockURLStreamHandlerFactory(URLConnection urlConnection) {
-            this.value = new WeakReference<URLConnection>(urlConnection);
-        }
-
-        @Override
-        public URLStreamHandler createURLStreamHandler(String protocol) {
-            return "mock".equals(protocol) ? new URLStreamHandler() {
-                protected URLConnection openConnection(URL url) throws IOException {
-                    try {
-                        return value.get();
-                    } finally {
-                        value.clear();
-                    }
-                }
-            } : null;
-        }
-    }
-
     @Test
     public void shouldConfigureURLConnection() throws Exception {
         URLConnection urlConnection = mock(URLConnection.class);
 
-        // Although somewhat of a hack, this approach gets the job done - this method can 
-        // only be called once per virtual machine, but that is sufficient for now.
-        URL.setURLStreamHandlerFactory(new MockURLStreamHandlerFactory(urlConnection));
         when(urlConnection.getInputStream()).thenReturn(getClass().getResourceAsStream("/jwks.json"));
+        MockURLStreamHandlerFactory.getInstance().setConnection(urlConnection);
 
         int connectTimeout = 10000;
         int readTimeout = 15000;
